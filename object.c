@@ -168,6 +168,13 @@ int object_read(const ObjectID *id, ObjectType *type_out, void **data_out, size_
     }
     fclose(f);
 
+    // Integrity check before parsing
+    ObjectID computed;
+    compute_hash(buf, file_size, &computed);
+    if (memcmp(computed.hash, id->hash, HASH_SIZE) != 0) {
+        free(buf); return -1;
+    }
+
     uint8_t *nul = memchr(buf, '\0', file_size);
     if (!nul) { free(buf); return -1; }
 
