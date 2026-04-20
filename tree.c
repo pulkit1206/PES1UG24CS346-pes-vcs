@@ -161,7 +161,12 @@ static int write_tree_recursive(IndexEntry **entries, int count, int depth, Obje
             }
         } else {
             // File case
-            i++; // Placeholder for file logic
+            TreeEntry *entry = &tree.entries[tree.count++];
+            entry->mode = entries[i]->mode;
+            entry->hash = entries[i]->hash;
+            strncpy(entry->name, start, sizeof(entry->name) - 1);
+            entry->name[sizeof(entry->name) - 1] = '\0';
+            i++;
         }
     }
 
