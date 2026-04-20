@@ -136,8 +136,29 @@ static int write_tree_recursive(IndexEntry **entries, int count, int depth, Obje
 
         const char *slash = strchr(start, '/');
         if (slash) {
-            // Subdirectory case
-            i++; // Placeholder for group logic
+            // Subdirectory case: group all entries sharing this directory name
+            size_t dir_name_len = slash - start;
+            int group_start = i;
+            while (i < count) {
+                const char *next_path = entries[i]->path;
+                const char *next_start = next_path;
+                for (int d = 0; d < depth; d++) {
+                    next_start = strchr(next_start, '/');
+                    if (next_start) next_start++;
+                }
+                if (!next_start || strncmp(next_start, start, dir_name_len) != 0 || next_start[dir_name_len] != '/') {
+                    break;
+                }
+                i++;
+            }
+
+            TreeEntry *entry = &tree.entries[tree.count++];
+            entry->mode = MODE_DIR;
+            strncpy(entry->name, start, dir_name_len);
+            entry->name[dir_name_len] = '\0';
+            if (write_tree_recursive(entries + group_start, i - group_start, depth + 1, &entry->hash) != 0) {
+                return -1;
+            }
         } else {
             // File case
             i++; // Placeholder for file logic
