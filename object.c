@@ -112,7 +112,20 @@ int object_write(ObjectType type, const void *data, size_t len, ObjectID *id_out
     ObjectID id;
     compute_hash(full, full_len, &id);
 
-    // TODO: deduplication, shard dir, write, fsync, rename
+    if (object_exists(&id)) {
+        if (id_out) *id_out = id;
+        free(full);
+        return 0;
+    }
+
+    char hex[HASH_HEX_SIZE + 1];
+    hash_to_hex(&id, hex);
+
+    char shard_dir[512];
+    snprintf(shard_dir, sizeof(shard_dir), "%s/%.2s", OBJECTS_DIR, hex);
+    mkdir(shard_dir, 0755);
+
+    // TODO: write, fsync, rename
     free(full);
     (void)id_out;
     return -1;
