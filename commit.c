@@ -209,6 +209,13 @@ int commit_create(const char *message, ObjectID *commit_id_out) {
         commit.has_parent = 0;
     }
 
-    (void)message; (void)commit_id_out;
+    // 3. Populate metadata
+    strncpy(commit.author, pes_author(), sizeof(commit.author) - 1);
+    commit.author[sizeof(commit.author) - 1] = '\0';
+    commit.timestamp = (uint64_t)time(NULL);
+    strncpy(commit.message, message, sizeof(commit.message) - 1);
+    commit.message[sizeof(commit.message) - 1] = '\0';
+
+    (void)commit_id_out;
     return -1;
 }
