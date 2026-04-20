@@ -150,6 +150,45 @@ int object_write(ObjectType type, const void *data, size_t len, ObjectID *id_out
 }
 
 int object_read(const ObjectID *id, ObjectType *type_out, void **data_out, size_t *len_out) {
-    (void)id; (void)type_out; (void)data_out; (void)len_out;
-    return -1;
+    char path[512];
+    object_path(id, path, sizeof(path));
+
+    FILE *f = fopen(path, "rb");
+    if (!f) return -1;
+
+    fseek(f, 0, SEEK_END);
+    long file_size = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    if (file_size <= 0) { fclose(f); return -1; }
+
+    uint8_t *buf = malloc(file_size);
+    if (!buf) { fclose(f); return -1; }
+    if ((long)fread(buf, 1, file_size, f) != file_size) {
+        free(buf); fclose(f); return -1;
+    }
+    fclose(f);
+
+    uint8_t *nul = memchr(buf, '\0', file_size);
+    if (!nul) { free(buf); return -1; }
+
+    ObjectType type;
+    if      (strncmp((char *)buf, "blob",   4) == 0) type = OBJ_BLOB;
+    else if (strncmp((char *)buf, "tree",   4) == 0) type = OBJ_TREE;
+    else if (strncmp((char *)buf, "commit", 6) == 0) type = OBJ_COMMIT;
+    else { free(buf); return -1; }
+
+    size_t declared_len = (size_t)atol(strchr((char *)buf, ' ') + 1);
+    uint8_t *data_start = nul + 1;
+    size_t actual_data_len = file_size - (data_start - buf);
+    if (actual_data_len != declared_len) { free(buf); return -1; }
+
+    void *out = malloc(actual_data_len);
+    if (!out) { free(buf); return -1; }
+    memcpy(out, data_start, actual_data_len);
+
+    *type_out = type;
+    *data_out = out;
+    *len_out  = actual_data_len;
+    free(buf);
+    return 0;
 }
