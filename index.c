@@ -174,7 +174,8 @@ static int compare_index_entries(const void *a, const void *b) {
 }
 
 int index_save(const Index *index) {
-    // Sort entries by path (Git standard)
+    // Sort entries by path (Git standard) to ensure deterministic output
+    // and efficient status comparison.
     Index sorted_index = *index;
     qsort(sorted_index.entries, sorted_index.count, sizeof(IndexEntry), compare_index_entries);
 
@@ -187,14 +188,17 @@ int index_save(const Index *index) {
         const IndexEntry *entry = &sorted_index.entries[i];
         char hash_hex[HASH_HEX_SIZE + 1];
         hash_to_hex(&entry->hash, hash_hex);
+        // Format: <mode> <hash> <mtime> <size> <path>
         fprintf(f, "%o %s %lu %u %s\n", 
                 entry->mode, hash_hex, entry->mtime_sec, entry->size, entry->path);
     }
 
+    // Ensure data is persisted before renaming
     if (fflush(f) != 0) { fclose(f); unlink(tmp_path); return -1; }
     if (fsync(fileno(f)) != 0) { fclose(f); unlink(tmp_path); return -1; }
     fclose(f);
 
+    // Atomic replacement of the index file
     if (rename(tmp_path, INDEX_FILE) != 0) { unlink(tmp_path); return -1; }
 
     return 0;
