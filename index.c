@@ -218,20 +218,25 @@ int index_add(Index *index, const char *path) {
     if (!S_ISREG(st.st_mode)) { fprintf(stderr, "error: '%s' is not a regular file\n", path); return -1; }
 
     FILE *f = fopen(path, "rb");
-    if (!f) return -1;
+    if (!f) { perror("fopen"); return -1; }
 
-    void *data = malloc(st.st_size);
-    if (!data) { fclose(f); return -1; }
-    if (fread(data, 1, st.st_size, f) != (size_t)st.st_size) {
-        free(data); fclose(f); return -1;
+    void *data = NULL;
+    if (st.st_size > 0) {
+        data = malloc(st.st_size);
+        if (!data) { fclose(f); return -1; }
+        if (fread(data, 1, st.st_size, f) != (size_t)st.st_size) {
+            perror("fread");
+            free(data); fclose(f); return -1;
+        }
     }
     fclose(f);
 
     ObjectID blob_id;
     if (object_write(OBJ_BLOB, data, st.st_size, &blob_id) != 0) {
+        fprintf(stderr, "error: failed to write blob for '%s'\n", path);
         free(data); return -1;
     }
-    free(data);
+    if (data) free(data);
 
     IndexEntry *entry = index_find(index, path);
     if (!entry) {
