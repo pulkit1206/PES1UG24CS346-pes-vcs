@@ -216,6 +216,19 @@ int commit_create(const char *message, ObjectID *commit_id_out) {
     strncpy(commit.message, message, sizeof(commit.message) - 1);
     commit.message[sizeof(commit.message) - 1] = '\0';
 
-    (void)commit_id_out;
-    return -1;
+    // 4. Serialize and write the commit object
+    void *data;
+    size_t len;
+    if (commit_serialize(&commit, &data, &len) != 0) return -1;
+
+    ObjectID commit_id;
+    if (object_write(OBJ_COMMIT, data, len, &commit_id) != 0) {
+        free(data);
+        return -1;
+    }
+    free(data);
+
+    if (commit_id_out) *commit_id_out = commit_id;
+
+    return -1; // Still need to update HEAD
 }
