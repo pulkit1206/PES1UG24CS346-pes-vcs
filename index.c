@@ -135,6 +135,10 @@ int index_status(const Index *index) {
 //   - hex_to_hash                      : converting the parsed string to ObjectID
 //
 // Returns 0 on success, -1 on error.
+// Forward declarations
+int object_write(ObjectType type, const void *data, size_t len, ObjectID *id_out);
+uint32_t get_file_mode(const char *path);
+
 int index_load(Index *index) {
     index->count = 0;
     FILE *f = fopen(INDEX_FILE, "r");
@@ -145,11 +149,13 @@ int index_load(Index *index) {
         IndexEntry *entry = &index->entries[index->count];
         char hash_hex[HASH_HEX_SIZE + 1];
         
-        if (sscanf(line, "%o %64s %lu %u %511[^\n]", 
-                   &entry->mode, hash_hex, &entry->mtime_sec, 
+        unsigned long long mtime_tmp;
+        if (sscanf(line, "%o %64s %llu %u %511[^\n]", 
+                   &entry->mode, hash_hex, &mtime_tmp, 
                    &entry->size, entry->path) != 5) {
             continue;
         }
+        entry->mtime_sec = (uint64_t)mtime_tmp;
 
         if (hex_to_hash(hash_hex, &entry->hash) != 0) continue;
         index->count++;
@@ -189,8 +195,8 @@ int index_save(const Index *index) {
         char hash_hex[HASH_HEX_SIZE + 1];
         hash_to_hex(&entry->hash, hash_hex);
         // Format: <mode> <hash> <mtime> <size> <path>
-        fprintf(f, "%o %s %lu %u %s\n", 
-                entry->mode, hash_hex, entry->mtime_sec, entry->size, entry->path);
+        fprintf(f, "%o %s %llu %u %s\n", 
+                entry->mode, hash_hex, (unsigned long long)entry->mtime_sec, entry->size, entry->path);
     }
 
     // Ensure data is persisted before renaming
@@ -213,8 +219,6 @@ int index_save(const Index *index) {
 //   - index_find                       : checking if the file is already staged
 //
 // Returns 0 on success, -1 on error.
-// Forward declarations for object.c functions
-int object_write(ObjectType type, const void *data, size_t len, ObjectID *id_out);
 
 int index_add(Index *index, const char *path) {
     struct stat st;
