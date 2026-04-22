@@ -17,4 +17,16 @@ test_tree
 .vscode/
 .idea/
 
+# Temporary and Output files
+*.txt
+*.log
+lldb_cmds
+test_outputs_fixed.txt
+git_history.txt
+test_results.md
+architecture.md
+screenshot_guide.md
+project_summary.md
 
+# OS specific
+.DS_Store

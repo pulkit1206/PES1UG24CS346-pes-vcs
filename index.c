@@ -179,25 +179,41 @@ static int compare_index_entries(const void *a, const void *b) {
     return strcmp(((const IndexEntry *)a)->path, ((const IndexEntry *)b)->path);
 }
 
+static int compare_ptrs(const void *a, const void *b) {
+    return strcmp((*(const IndexEntry **)a)->path, (*(const IndexEntry **)b)->path);
+}
+
 int index_save(const Index *index) {
-    // Sort entries by path (Git standard) to ensure deterministic output
-    // and efficient status comparison.
-    Index sorted_index = *index;
-    qsort(sorted_index.entries, sorted_index.count, sizeof(IndexEntry), compare_index_entries);
+    // To avoid stack overflow with 5.6MB Index struct, we sort an array of pointers
+    // to the entries instead of copying the whole struct.
+    const IndexEntry **sorted_pointers = malloc(index->count * sizeof(IndexEntry *));
+    if (!sorted_pointers && index->count > 0) return -1;
+
+    for (int i = 0; i < index->count; i++) {
+        sorted_pointers[i] = &index->entries[i];
+    }
+
+    if (index->count > 0) {
+        qsort(sorted_pointers, index->count, sizeof(IndexEntry *), compare_ptrs);
+    }
 
     char tmp_path[512];
     snprintf(tmp_path, sizeof(tmp_path), "%s.tmp", INDEX_FILE);
     FILE *f = fopen(tmp_path, "w");
-    if (!f) return -1;
+    if (!f) {
+        free(sorted_pointers);
+        return -1;
+    }
 
-    for (int i = 0; i < sorted_index.count; i++) {
-        const IndexEntry *entry = &sorted_index.entries[i];
+    for (int i = 0; i < index->count; i++) {
+        const IndexEntry *entry = sorted_pointers[i];
         char hash_hex[HASH_HEX_SIZE + 1];
         hash_to_hex(&entry->hash, hash_hex);
-        // Format: <mode> <hash> <mtime> <size> <path>
         fprintf(f, "%o %s %llu %u %s\n", 
                 entry->mode, hash_hex, (unsigned long long)entry->mtime_sec, entry->size, entry->path);
     }
+
+    free(sorted_pointers);
 
     // Ensure data is persisted before renaming
     if (fflush(f) != 0) { fclose(f); unlink(tmp_path); return -1; }
