@@ -17,11 +17,11 @@ All core phases have been implemented and verified:
 
 The following documents have been prepared for final submission and upload:
 
-1. **[Git History](git_history.txt)**: Full history of the project development.
-2. **[Execution Outputs](test_results.md)**: Captured output of the integration test suite.
-3. **[Architecture Map](architecture.md)**: Technical breakdown of the system design.
-4. **[Screenshot Guide](screenshot_guide.md)**: Step-by-step instructions for visual verification.
-5. **[Project Summary](project_summary.md)**: Final report including Phase 5/6 analysis answers.
+1. **[Git History]**: Full history of the project development.
+2. **[Execution Outputs]**: Captured output of the integration test suite.
+3. **[Architecture Map]**: Technical breakdown of the system design.
+4. **[Screenshot Guide]**: Step-by-step instructions for visual verification.
+5. **[Project Summary]**: Final report including Phase 5/6 analysis answers.
 
 ---
 
